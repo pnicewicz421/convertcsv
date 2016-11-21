@@ -12,13 +12,6 @@ import numpy as np
 import pandas as pd
 from pandas import Series, DataFrame
 
-# Import smtplib for the actual sending function
-import smtplib
-
-# Here are the email package modules we'll need
-from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
-
 
 # Create your views here.
 def index_view(request):
@@ -185,89 +178,72 @@ def handle_file(request):
     projectfile = export[1] #Read Project.csv as a DF
     project1 = projectfile[projectfile['ProjectType'].isin([1, 4, 8])] #Select only SO, ES, or SH projects
     project2 = projectfile[projectfile['ProjectType'].isin([2, 3, 6, 9, 10, 11, 12, 13, 14])] #3.197B institutions
-    projectid1 = project1['ProjectID'] #Select projectids for 3.917A lit homeless
-    projectid2 = project2['ProjectID'] #Select projectids for 3.917B institutions
+    projectid1 = project1['ProjectID'].tolist() #Select projectids for 3.917A lit homeless
+    projectid2 = project2['ProjectID'].tolist() #Select projectids for 3.917B institutions
 
     enrollmentfile = export[5]
-    #enrollment1 = enrollmentfile[enrollmentfile['ProjectID'].isin(projectid1)] #113 select only enrollments that match project ID in one of the projects above
-    #enrollment2 = enrollmentfile[enrollmentfile['ProjectID'].isin(projectid2)] #109 Select all ProjectID in institutions
-
+  
+    #For both A and B, change ResidencePrior = 17--> 99
+    enrollmentfile['ResidencePrior'].replace(17, 99, inplace=True)
+    
     #LOSUnderThrehold for enrollment1 should be 99
     enrollmentfile['LOSUnderThreshold'] = 99
-    enrollmentfile['ProjectID'].isin(projectid1)
-    #enrollmentfile[enrollmentfile['ProjectID'].isin(projectid1)]['LOSUnderThreshold'] = 99
 
     #Set all institutions under 90 days 
-    #enrollmentfile[(enrollmentfile['ProjectID'].isin(projectid2))]['LOSUnderThreshold'] = 1
-    #& (enrollmentfile['ResidencePrior'].isin([4, 5, 6, 7, 15, 24])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([2, 3, 10, 11]))]['LOSUnderThreshold'] = 1 
-    #enrollmentfile[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([14, 23, 21, 3, 22, 19, 25, 20, 26, 12, 13, 2, 17, 8, 9, 99])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([10, 11]))]['LOSUnderThreshold'] = 1
+    enrollmentfile.ix[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([4, 5, 6, 7, 15, 24])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([2, 3, 10, 11])), 'LOSUnderThreshold'] = 1 
+    enrollmentfile.ix[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([14, 23, 21, 3, 22, 19, 25, 20, 26, 12, 13, 2, 17, 8, 9, 99])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([10, 11])), 'LOSUnderThreshold'] = 1
     
     #Over 90 days
-    #enrollmentfile[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([4, 5, 6, 7, 15, 24])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([4, 5, 8, 9, 99]))]['LOSUnderThreshold'] = 0
-    #enrollmentfile[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([14, 23, 21, 3, 22, 19, 25, 20, 26, 12, 13, 2, 17, 8, 9, 99])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([2, 3, 4, 5, 8, 9, 99]))]['LOSUnderThreshold'] = 0
+    enrollmentfile.ix[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([4, 5, 6, 7, 15, 24])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([4, 5, 8, 9, 99])), 'LOSUnderThreshold'] = 0
+    enrollmentfile.ix[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([14, 23, 21, 3, 22, 19, 25, 20, 26, 12, 13, 2, 17, 8, 9, 99])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([2, 3, 4, 5, 8, 9, 99])), 'LOSUnderThreshold'] = 0
 
-    #enrollmentfile[(enrollmentfile['ProjectID'].isin(projectid2)) & ~(enrollmentfile['ResidencePrior'].isin([4, 5, 6, 7, 15, 24, 14, 23, 21, 3, 22, 19, 25, 20, 26, 12, 13, 2, 17, 8, 9, 99]))]['LOSUnderThreshold'] = 99
+    #enrollmentfile[(enrollmentfile['ProjectID'].isin(projectid2)) & ~(enrollmentfile['ResidencePrior'].isin([4, 5, 6, 7, 15, 24, 14, 23, 21, 3, 22, 19, 25, 20, 26, 12, 13, 2, 17, 8, 9, 99])), 'LOSUnderThreshold'] = 99
     
-    #For both A and B, change ResidencePrior = 17--> 99
-    #enrollmentfile['ResidencePrior'].replace(17, 99, inplace=True)
-
-    #A ResidencePriorLengthOfStay -- remains unchanged
-    #A DateToStreetESSH --remains unchanged
-
-    #3.917A TimesHomelessPastThreeYears 0 --> 1 
-    mask = ((enrollmentfile['ProjectID'].isin(projectid1)) & (enrollmentfile['TimesHomelessPastThreeYears'] == 0)) 
-    enrollmentfile.loc[mask, 'TimesHomelessPastThreeYears'] = 1 
-
-    #A MonthsHomelessPastThreeYears remains the same
-
-    #B Select ResidencePrior = 4, 5, 6, 7, 15, 24 (all institutions) and ResidencePriorLengthOfStay = 2, 3, 10, 11 (less than 90 days) --> Yes, LOSUnderThreshold =1 
-    #Change LOSUnderThreshold to 1
-    maskA = (((enrollmentfile['ResidencePrior'] > 3) | (enrollmentfile['ResidencePrior'] < 8) | (enrollmentfile['ResidencePrior'] == 15) | (enrollmentfile['ResidencePrior'] == 24)) & ((enrollmentfile['ResidencePriorLengthOfStay'] == 2 ) | (enrollmentfile['ResidencePriorLengthOfStay'] == 3 ) | (enrollmentfile['ResidencePriorLengthOfStay'] == 10 ) | (enrollmentfile['ResidencePriorLengthOfStay'] == 11 )))
-
-    #Select ResidencePrior = 2, 3, 8, 9, 12, 13, 14, 17, 19, 20, 21, 22, 23, 25, 26, 99
-    #and ResidencePriorLengthOfStay = 10, 11
-    maskB = (((enrollmentfile['ResidencePrior'] == 2) | (enrollmentfile['ResidencePrior'] == 3) | (enrollmentfile['ResidencePrior'] == 8) |
-            (enrollmentfile['ResidencePrior'] == 9) | (enrollmentfile['ResidencePrior'] == 12) | (enrollmentfile['ResidencePrior'] == 13) |
-            (enrollmentfile['ResidencePrior'] == 14) | (enrollmentfile['ResidencePrior'] == 17) | (enrollmentfile['ResidencePrior'] == 19) |
-            (enrollmentfile['ResidencePrior'] == 20) | (enrollmentfile['ResidencePrior'] == 21) | (enrollmentfile['ResidencePrior'] == 22) |
-            (enrollmentfile['ResidencePrior'] == 23) | (enrollmentfile['ResidencePrior'] == 25) | (enrollmentfile['ResidencePrior'] == 26) |
-            (enrollmentfile['ResidencePrior'] == 99)) & ((enrollmentfile['ResidencePriorLengthOfStay'] == 10 ) | (enrollmentfile['ResidencePriorLengthOfStay'] == 11 )))
-
-    #LOSUnderThreshold: for 3.917B projects, input 1 where they fit the one of the two masks or otherwise 0 
-    #enrollmentfile.loc[enrollmentfile['ProjectID'].isin(projectid2), 'LOSUnderThreshold'] = np.where(((maskA == True) | (maskB == True)), 1, 0)
-
-
-
-    #New Element PreviousStreetESSH
-    #Select ResidencePrior = 1, 16, 18 and EntryFromStreetESSH = 8, 9, 99
-    maskC = ((enrollmentfile['ResidencePrior'] == 1) | (enrollmentfile['ResidencePrior'] == 16) | (enrollmentfile['ResidencePrior'] == 18))
-
-    #Set PreviousStreetESSH = 0
-
-    #Select ResidencePrior = 4, 5, 6,  7, 15, 24 and ResidencePriorLengthOfStay = 2, 3, 10, 11 (maskA) EntryFromStreetESSH = 8, 9, 99
-    #Set PreviousStreetESSH = 0
-
-    ##Select ResidencePrior = 2, 3, 8, 9, 12, 13, 14, 17, 19, 20, 21, 22, 23, 25, 26, 99
-    #and ResidencePriorLengthOfStay = 10, 11 (maskB) and EntryFromStreetESSH = 8, 9, 99, 0
-    maskD = ((enrollmentfile['EntryFromStreetESSH'] == 0) | (enrollmentfile['EntryFromStreetESSH'] == 8) | (enrollmentfile['EntryFromStreetESSH'] == 9) | (enrollmentfile['EntryFromStreetESSH'] == 99))
-    #Set PreviousStreetESSH = 0 
-
-    #For 3.917B projects, input 1 for maskA, maskB, or maskC or 0 in PreviousStreetESSH
-    enrollmentfile.loc[enrollmentfile['ProjectID'].isin(projectid2), 'PreviousStreetESSH'] = np.where((((maskA == True) | (maskB == True) | (maskC == True)) & (maskD == True)), 0, 1)
-
-    #Carry over date when maskE = ResidencePrior = 1, 16, 18 or maskA or maskB
-    maskE = ((enrollmentfile['ResidencePrior'] == 1) | (enrollmentfile['ResidencePrior'] == 16) | (enrollmentfile['ResidencePrior'] == 18))
+    #PreviousStreetESSH
+    enrollmentfile['PreviousStreetESSH'] = 888
     
-    #For 3.917B projects,  if they are not one of the carry over fields, set that field to blank.
-    enrollmentfile.loc[(((maskA == False) & (maskB == False) & (maskE == False)) & enrollmentfile['ProjectID'].isin(projectid2)), 'DateToStreetESSH'] = ''
+    #Institutional
+    enrollmentfile.ix[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([15, 6, 7, 24, 4, 5])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([10, 11, 2, 3])), 'PreviousStreetESSH'] = enrollmentfile['EntryFromStreetESSH']
+    
+    #TH/PH
+    enrollmentfile.ix[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([14, 23, 21, 3, 22, 19, 25, 20, 26, 12, 13, 2, 8, 9, 99])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([10, 11])), 'PreviousStreetESSH'] = enrollmentfile['EntryFromStreetESSH']
+    
+    #From Homeless
+    enrollmentfile.ix[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([16, 1, 18])), 'PreviousStreetESSH'] = 888
+    
+    enrollmentfile['PreviousStreetESSH'].replace(8, 0, inplace=True)
+    enrollmentfile['PreviousStreetESSH'].replace(9, 0, inplace=True)
+    enrollmentfile['PreviousStreetESSH'].replace(99, 0, inplace=True)
+    enrollmentfile['PreviousStreetESSH'].replace(888, 99, inplace=True)
+    
+    enrollmentfile['NewDateToStreetESSH'] = ''
+    
+    #Map All Dates into NewDateToStreetESSH from DateToStreetESSH for 3.197A
+    enrollmentfile.ix[(enrollmentfile['ProjectID'].isin(projectid1)), 'NewDateToStreetESSH'] = enrollmentfile['DateToStreetESSH']
 
-    #For 3.917B projects, maskE or maskA or maskB --> enrollment TimesHomelessPastThreeYears 0 --> 1
-    enrollmentfile.loc[enrollmentfile['ProjectID'].isin(projectid2), 'TimesHomelessPastThreeYears'] = np.where(((maskA == True) | (maskB == True) | (maskE == True)), 0, 1)
+    #3.197B
+    #Homeless
+    enrollmentfile.ix[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([16, 1, 18])), 'NewDateToStreetESSH'] = enrollmentfile['DateToStreetESSH']
+    
+    #Institution
+    enrollmentfile.ix[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([15,  6, 7, 24, 4, 5])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([10, 11, 2, 3])) & (enrollmentfile['PreviousStreetESSH']==1), 'NewDateToStreetESSH'] = enrollmentfile['DateToStreetESSH']
 
-    #!(maskE or maskA or maskB) --> enrollment MonthsHomelessPastThreeYears --> ''
-    enrollmentfile.loc[(((maskA == False) & (maskB == False) & (maskE == False)) & enrollmentfile['ProjectID'].isin(projectid2)), 'MonthsHomelessPastThreeYears'] = ''
+    #Others
+    enrollmentfile.ix[(enrollmentfile['ProjectID'].isin(projectid2)) & (enrollmentfile['ResidencePrior'].isin([14, 23, 21, 3, 22, 19, 25, 20, 26, 12, 13, 2, 17, 8, 9, 99])) & (enrollmentfile['ResidencePriorLengthOfStay'].isin([10, 11])) & (enrollmentfile['PreviousStreetESSH']==1), 'NewDateToStreetESSH'] = enrollmentfile['DateToStreetESSH']
+
+
+    #Replace NewStreetDateToStreetESSH with DateToStreetESSH
+    del enrollmentfile['DateToStreetESSH']
+    enrollmentfile.rename(index=str, columns={"NewDateToStreetESSH": "DateToStreetESSH"}, inplace=True)
+    
+    #TimesHomelessPastThreeYears
+    enrollmentfile['TimesHomelessPastThreeYears'].replace(0, 1, inplace=True)
+    enrollmentfile.ix[(enrollmentfile['DateToStreetESSH']==''), 'TimesHomelessPastThreeYears'] = 99
+    
+    enrollmentfile.ix[(enrollmentfile['TimesHomelessPastThreeYears']==99), 'MonthsHomelessPastThreeYears'] = 99
 
     #DisablingCondition in enrollment.csv -- change any blanks to 99
+    enrollmentfile['DisablingCondition'].replace('', 99, inplace=True)
     enrollmentfile['DisablingCondition'].replace(np.nan, 99, inplace=True)
 
     #Add HouseholdID in enrollmentcoc.csv -- 
@@ -277,7 +253,7 @@ def handle_file(request):
     #row_iterator = enrollmentfile.iterrows()
 
     for i, row_i in enrollmentfile.iterrows():
-        PersonalID = row_i['PersonalID']
+        PersonalID = row_i['ProjectEntryID']
         HouseholdID = row_i['HouseholdID']
         PersonToHouse[PersonalID] = HouseholdID
 
@@ -306,8 +282,8 @@ def handle_file(request):
 
     # Input the values based on the personalid as key in enrollmentcoc.csv
     enrollmentcocfile = export[6]
-    enrollmentcocfile['HouseholdID'] = enrollmentcocfile['PersonalID']
-    enrollmentcocfile['HouseholdID'].replace(PersonToHouse, inplace=True)
+    enrollmentcocfile['HouseholdID'] = enrollmentcocfile['ProjectEntryID']
+    enrollmentcocfile['HouseholdID'].map(PersonToHouse)
     enrollmentcocfile = enrollmentcocfile[['EnrollmentCoCID', 'ProjectEntryID', 'HouseholdID', 'ProjectID', 'PersonalID', 'InformationDate', 'CoCCode', 'DataCollectionStage',
                     'DateCreated', 'DateUpdated', 'UserID', 'DateDeleted', 'ExportID']]
 
@@ -333,7 +309,7 @@ def handle_file(request):
                     'IncarceratedParent', 'IncarceratedParentStatus', 'ReferralSource', 'CountOutreachReferralApproaches', 'ExchangeForSex',
                     'ExchangeForSexPastThreeMonths', 'CountOfExchangeForSex', 'AskedOrForcedToExchangeForSex', 'AskedOrForcedToExchangeForSexPastThreeMonths',
                     'WorkPlaceViolenceThreats', 'WorkplacePromiseDifference', 'CoercedToContinueWork', 'LaborExploitPastThreeMonths',
-                    'UrgentReferral', 'TimeToHousingLoss', 'ZeroIncome', 'AnnualPercentAMI', 'FinancialChange', 'EvictionHistory',
+                    'UrgentReferral', 'TimeToHousingLoss', 'ZeroIncome', 'AnnualPercentAMI', 'FinancialChange', 'HouseholdChange', 'EvictionHistory',
                     'SubsidyAtRisk', 'LiteralHomelessHistory', 'DisabledHoH', 'CriminalRecord', 'SexOffender', 'DependentUnder6',
                     'SingleParent', 'HH5Plus', 'IraqAfghanistan', 'FemVet', 'HPScreeningScore', 'ThresholdScore',
                     'VAMCStation', 'ERVisits', 'JailNights', 'HospitalNights', 'DateCreated', 'DateUpdated', 'UserID', 'DateDeleted', 'ExportID']]
@@ -347,11 +323,17 @@ def handle_file(request):
                 'ExportStartDate', 'ExportEndDate', 'SoftwareName', 'SoftwareVersion', 'ExportPeriodType',
                 'ExportDirective', 'HashStatus']]
 
+    #Remove OtherGender field from client.csv
+    clientfile = export[4]
+    del clientfile['OtherGender']
 
     #Add IndianHealthServices and NoIndianHealthServicesReason in IncomeBenefits.csv
     incomebenefitsfile = export[8]
-    incomebenefitsfile['IndianHealthServices'] = ''
-    incomebenefitsfile['NoIndianHealthServicesReason'] = ''
+    incomebenefitsfile['IndianHealthServices'] = 99
+    incomebenefitsfile['NoIndianHealthServicesReason'] = 99
+    incomebenefitsfile['OtherInsurance'] = 99
+    incomebenefitsfile['OtherInsuranceIdentify'] = 99
+    
     incomebenefitsfile = incomebenefitsfile[['IncomeBenefitsID', 'ProjectEntryID', 'PersonalID', 'InformationDate', 'IncomeFromAnySource', 'TotalMonthlyIncome', 'Earned',
                     'EarnedAmount', 'Unemployment', 'UnemploymentAmount', 'SSI', 'SSIAmount', 'SSDI', 'SSDIAmount', 'VADisabilityService',
                     'VADisabilityServiceAmount', 'VADisabilityNonService', 'VADisabilityNonServiceAmount', 'PrivateDisability', 'PrivateDisabilityAmount',
@@ -360,27 +342,28 @@ def handle_file(request):
                     'SNAP', 'WIC', 'TANFChildCare', 'TANFTransportation', 'OtherTANF', 'RentalAssistanceOngoing', 'RentalAssistanceTemp', 'OtherBenefitsSource', 'OtherBenefitsSourceIdentify',
                     'InsuranceFromAnySource', 'Medicaid', 'NoMedicaidReason', 'Medicare', 'NoMedicareReason', 'SCHIP', 'NoSCHIPReason', 'VAMedicalServices',
                     'NoVAMedReason', 'EmployerProvided', 'NoEmployerProvidedReason', 'COBRA', 'NoCOBRAReason', 'PrivatePay', 'NoPrivatePayReason', 'StateHealthIns',
-                    'NoStateHealthInsReason', 'IndianHealthServices', 'NoIndianHealthServicesReason', 'HIVAIDSAssistance', 'NoHIVAIDSAssistanceReason', 'ADAP', 'NoADAPReason', 'DataCollectionStage', 'DateCreated', 'DateUpdated',
+                    'NoStateHealthInsReason', 'IndianHealthServices', 'NoIndianHealthServicesReason', 'OtherInsurance', 'OtherInsuranceIdentify', 'HIVAIDSAssistance', 'NoHIVAIDSAssistanceReason', 'ADAP', 'NoADAPReason', 'DataCollectionStage', 'DateCreated', 'DateUpdated',
                     'UserID', 'DateDeleted', 'ExportID']]
 
     # save export.csv, enrollment.csv, enrollmentcoc.csv, incomebenefits.csv as csv
     newpath = filedir + 'newzip'
     if not os.path.exists(newpath):
         os.makedirs (filedir + 'newzip')
-    exportfile.to_csv(filedir + 'newzip/Export.csv', sep=',', header=True)
-    enrollmentfile.to_csv(filedir + 'newzip/Enrollment.csv', sep=',', header=True)
-    enrollmentcocfile.to_csv(filedir + 'newzip/EnrollmentCoC.csv', sep=',', header=True)
-    incomebenefitsfile.to_csv(filedir + 'newzip/IncomeBenefits.csv', sep=',', header=True)
+    exportfile.to_csv(filedir + 'newzip/Export.csv', sep=',', header=True, index=False)
+    enrollmentfile.to_csv(filedir + 'newzip/Enrollment.csv', sep=',', header=True, index=False)
+    enrollmentcocfile.to_csv(filedir + 'newzip/EnrollmentCoC.csv', sep=',', header=True, index=False)
+    incomebenefitsfile.to_csv(filedir + 'newzip/IncomeBenefits.csv', sep=',', header=True, index=False)
+    clientfile.to_csv(filedir + 'newzip/Client.csv', sep=',', header=True, index=False)
 
-    export[1].to_csv(filedir + 'newzip/Project.csv', sep=',', header=True)
-    export[2].to_csv(filedir + 'newzip/ProjectCoC.csv', sep=',', header=True)
-    export[3].to_csv(filedir + 'newzip/Funder.csv', sep=',', header=True)
-    export[4].to_csv(filedir + 'newzip/Client.csv', sep=',', header=True)
-    export[7].to_csv(filedir + 'newzip/Exit.csv', sep=',', header=True)
-    export[9].to_csv(filedir + 'newzip/Disabilities.csv', sep=',', header=True)
-    export[10].to_csv(filedir + 'newzip/HealthAndDV.csv', sep=',', header=True)
-    export[11].to_csv(filedir + 'newzip/EmploymentEducation.csv', sep=',', header=True)
-    export[12].to_csv(filedir + 'newzip/Services.csv', sep=',', header=True)
+    #untouched files
+    export[1].to_csv(filedir + 'newzip/Project.csv', sep=',', header=True, index=False)
+    export[2].to_csv(filedir + 'newzip/ProjectCoC.csv', sep=',', header=True, index=False)
+    export[3].to_csv(filedir + 'newzip/Funder.csv', sep=',', header=True, index=False)
+    export[7].to_csv(filedir + 'newzip/Exit.csv', sep=',', header=True, index=False)
+    export[9].to_csv(filedir + 'newzip/Disabilities.csv', sep=',', header=True, index=False)
+    export[10].to_csv(filedir + 'newzip/HealthAndDV.csv', sep=',', header=True, index=False)
+    export[11].to_csv(filedir + 'newzip/EmploymentEducation.csv', sep=',', header=True, index=False)
+    export[12].to_csv(filedir + 'newzip/Services.csv', sep=',', header=True, index=False)
 
     # zip all into 
     # 0: export
