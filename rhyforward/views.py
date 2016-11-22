@@ -279,6 +279,26 @@ def handle_file(request):
     enrollmentfile['ERVisits'] = ''
     enrollmentfile['JailNights'] = ''
     enrollmentfile['HospitalNights'] = ''
+    
+    #convert floats to int
+    for n in (enrollmentfile.select_dtypes(include=[float])):
+        if enrollmentfile[n].notnull().sum() > 0: 
+            if 'ChildWelfareMonths' in n or 'JuvenileJusticeMonths' in n or 'CountOutreachReferralApproaches' in n:
+                enrollmentfile[n].replace(np.nan, 0, inplace=True)
+                enrollmentfile[n] = enrollmentfile[n].astype(int)
+            elif 'Date' not in n and 'Percent' not in n and 'ID' not in n and 'LastPermanent' not in n and 'VAMCStation' not in n:
+                enrollmentfile[n].replace(np.nan, 99, inplace=True)
+                enrollmentfile[n] = enrollmentfile[n].astype(int)
+                
+    #Better idea -- convert I columns with nan values to object values
+    #integerList = []
+    for n in integerList:
+        if enrollmentfile[n].notnull().sum() > 0: 
+            as_object = enrollmentfile['ResidencePrior'].fillna(0).astype(np.int64).astype(np.object)
+            as_object[enrollmentfile['ResidencePrior'].isnull()]=""
+
+    #enrollmentfile.to_csv('test.csv', index=False, float_format='%.2f') #this works
+
 
     # Input the values based on the personalid as key in enrollmentcoc.csv
     enrollmentcocfile = export[6]
@@ -286,7 +306,7 @@ def handle_file(request):
     enrollmentcocfile['HouseholdID'].map(PersonToHouse)
     enrollmentcocfile = enrollmentcocfile[['EnrollmentCoCID', 'ProjectEntryID', 'HouseholdID', 'ProjectID', 'PersonalID', 'InformationDate', 'CoCCode', 'DataCollectionStage',
                     'DateCreated', 'DateUpdated', 'UserID', 'DateDeleted', 'ExportID']]
-
+                    
     #delete the abrogated columns in enrollment.csv
     del enrollmentfile['OtherResidencePrior']
     del enrollmentfile['EntryFromStreetESSH']
@@ -333,6 +353,12 @@ def handle_file(request):
     incomebenefitsfile['NoIndianHealthServicesReason'] = 99
     incomebenefitsfile['OtherInsurance'] = 99
     incomebenefitsfile['OtherInsuranceIdentify'] = 99
+    
+    for n in (incomebenefitsfile.select_dtypes(include=[float])):
+        if incomebenefitsfile[n].notnull().sum() > 0: 
+            if 'Date' not in n and 'ID' not in n and 'TotalMonthlyIncome' not in n and 'Amount' not in n and 'OtherIncomeSourceIdentify' not in n and 'OtherBenefitsSourceIdentify' not in n and 'DataCollectionStage' not in n:
+                incomebenefitsfile[n].replace(np.nan, 99, inplace=True)
+                incomebenefitsfile[n] = incomebenefitsfile[n].astype(int)
     
     incomebenefitsfile = incomebenefitsfile[['IncomeBenefitsID', 'ProjectEntryID', 'PersonalID', 'InformationDate', 'IncomeFromAnySource', 'TotalMonthlyIncome', 'Earned',
                     'EarnedAmount', 'Unemployment', 'UnemploymentAmount', 'SSI', 'SSIAmount', 'SSDI', 'SSDIAmount', 'VADisabilityService',
@@ -397,4 +423,5 @@ def handle_file(request):
         myzip.write(filedir + 'newzip/Services.csv')
 
 
-    return HttpResponse('<html><body><h1>Congratulations! It has been done. </h1></body></html>')
+    return HttpResponse('<html><body><h1>Congratulations! Your file was converted successfully. </h1></body></html>')
+
