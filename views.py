@@ -238,7 +238,7 @@ def handle_file(request):
     
     #TimesHomelessPastThreeYears
     enrollmentfile['TimesHomelessPastThreeYears'].replace(0, 1, inplace=True)
-    enrollmentfile.ix[(enrollmentfile['DateToStreetESSH']==''), 'TimesHomelessPastThreeYears'] = 99
+    enrollmentfile.ix[enrollmentfile['DateToStreetESSH'].isnull(), 'TimesHomelessPastThreeYears'] = 99
     
     enrollmentfile.ix[(enrollmentfile['TimesHomelessPastThreeYears']==99), 'MonthsHomelessPastThreeYears'] = 99
 
@@ -291,7 +291,7 @@ def handle_file(request):
     # Input the values based on the personalid as key in enrollmentcoc.csv
     enrollmentcocfile = export[6]
     enrollmentcocfile['HouseholdID'] = enrollmentcocfile['ProjectEntryID']
-    enrollmentcocfile['HouseholdID'].map(PersonToHouse)
+    enrollmentcocfile['HouseholdID'] = enrollmentcocfile['HouseholdID'].map(PersonToHouse)
     enrollmentcocfile = enrollmentcocfile[['EnrollmentCoCID', 'ProjectEntryID', 'HouseholdID', 'ProjectID', 'PersonalID', 'InformationDate', 'CoCCode', 'DataCollectionStage',
                     'DateCreated', 'DateUpdated', 'UserID', 'DateDeleted', 'ExportID']]
                     
@@ -321,7 +321,22 @@ def handle_file(request):
                     'SingleParent', 'HH5Plus', 'IraqAfghanistan', 'FemVet', 'HPScreeningScore', 'ThresholdScore',
                     'VAMCStation', 'ERVisits', 'JailNights', 'HospitalNights', 'DateCreated', 'DateUpdated', 'UserID', 'DateDeleted', 'ExportID']]
 
-    integerList = ['RelationshipToHoH', 'ResidencePrior', 'ResidencePriorLengthOfStay', 'LOSUnderThreshold', 'PreviousStreetESSH', 'TimesHomelessPastThreeYears', 'MonthsHomelessPastThreeYears', 'DisablingCondition', 'HousingStatus', 'ClientEnrolledInPATH', 'ReasonNotEnrolled', 'WorstHousingSituation', 'PercentAMI', 'LastPermanentZIP', 'AddressDataQuality', 'FYSBYouth', 'ReasonNoServices', 'SexualOrientation', 'FormerWardChildWelfare', 'ChildWelfareYears', 'ChildWelfareMonths', 'FormerWardJuvenileJustice', 'JuvenileJusticeYears', 'JuvenileJusticeMonths', 'HouseholdDynamics', 'SexualOrientationGenderIDYouth', 'SexualOrientationGenderIDFam', 'HousingIssuesYouth', 'HousingIssuesFam', 'SchoolEducationalIssuesYouth', 'SchoolEducationalIssuesFam', 'HealthIssuesYouth', 'HealthIssuesFam', 'PhysicalDisabilityYouth', 'PhysicalDisabilityFam', 'MentalDisabilityYouth', 'MentalDisabilityFam', 'AbuseAndNeglectYouth', 'AbuseAndNeglectFam', 'AlcoholDrugAbuseYouth', 'AlcoholDrugAbuseFam', 'InsufficientIncome', 'ActiveMilitaryParent', 'IncarceratedParent', 'IncarceratedParentStatus', 'ReferralSource', 'CountOutreachReferralApproaches', 'ExchangeForSex', 'ExchangeForSexPastThreeMonths', 'CountOfExchangeForSex', 'AskedOrForcedToExchangeForSex', 'AskedOrForcedToExchangeForSexPastThreeMonths', 'WorkPlaceViolenceThreats', 'WorkplacePromiseDifference', 'CoercedToContinueWork', 'LaborExploitPastThreeMonths']
+    integerList = ['RelationshipToHoH', 'ResidencePrior', 'ResidencePriorLengthOfStay',
+                    'LOSUnderThreshold', 'PreviousStreetESSH', 'TimesHomelessPastThreeYears', 
+                    'MonthsHomelessPastThreeYears', 'DisablingCondition', 'HousingStatus', 
+                    'ClientEnrolledInPATH', 'ReasonNotEnrolled', 'WorstHousingSituation', 'PercentAMI', 
+                    'LastPermanentZIP', 'AddressDataQuality', 'FYSBYouth', 'ReasonNoServices', 'SexualOrientation', 
+                    'FormerWardChildWelfare', 'ChildWelfareYears', 'ChildWelfareMonths', 
+                    'FormerWardJuvenileJustice', 'JuvenileJusticeYears', 'JuvenileJusticeMonths', 'HouseholdDynamics',
+                    'SexualOrientationGenderIDYouth', 'SexualOrientationGenderIDFam', 'HousingIssuesYouth', 'HousingIssuesFam',
+                    'SchoolEducationalIssuesYouth', 'SchoolEducationalIssuesFam', 'UnemploymentYouth', 'UnemploymentFam',
+                    'MentalHealthIssuesYouth', 'MentalHealthIssuesFam', 'HealthIssuesYouth', 'HealthIssuesFam',
+                    'PhysicalDisabilityYouth', 'PhysicalDisabilityFam', 'MentalDisabilityYouth', 'MentalDisabilityFam', 
+                    'AbuseAndNeglectYouth', 'AbuseAndNeglectFam', 'AlcoholDrugAbuseYouth', 'AlcoholDrugAbuseFam', 'InsufficientIncome',
+                    'ActiveMilitaryParent', 'IncarceratedParent', 'IncarceratedParentStatus', 'ReferralSource',
+                    'CountOutreachReferralApproaches', 'ExchangeForSex', 'ExchangeForSexPastThreeMonths', 
+                    'CountOfExchangeForSex', 'AskedOrForcedToExchangeForSex', 'AskedOrForcedToExchangeForSexPastThreeMonths', 
+                    'WorkPlaceViolenceThreats', 'WorkplacePromiseDifference', 'CoercedToContinueWork', 'LaborExploitPastThreeMonths']
 
     enrollmentfile = integerizeMe(enrollmentfile, integerList)
 
@@ -334,7 +349,7 @@ def handle_file(request):
                 'ExportStartDate', 'ExportEndDate', 'SoftwareName', 'SoftwareVersion', 'ExportPeriodType',
                 'ExportDirective', 'HashStatus']]
 
-    integerList = ['SourceType', 'ExportPeriodType', 'ExportDirective', 'HashStatus']
+    integerList = ['SourceType', 'SourceContactPhone', 'SourceContactExtension', 'ExportPeriodType', 'ExportDirective',  'HashStatus']
     exportfile = integerizeMe(exportfile, integerList)
 
     #Remove OtherGender field from client.csv
@@ -369,8 +384,8 @@ def handle_file(request):
                     'TANFChildCare', 'TANFTransportation', 'OtherTANF', 'RentalAssistanceOngoing', 'RentalAssistanceTemp', 
                     'OtherBenefitsSource', 'InsuranceFromAnySource', 'Medicaid', 'NoMedicaidReason', 'Medicare', 'NoMedicareReason', 'SCHIP', 'NoSCHIPReason',
                     'VAMedicalServices', 'NoVAMedReason', 'EmployerProvided', 'NoEmployerProvidedReason', 'COBRA', 'NoCOBRAReason',
-                    'PrivatePay', 'NoPrivatePayReason', 'StateHealthIns', 'NoStateHealthInsReason', 
-                    'HIVAIDSAssistance', 'NoHIVAIDSAssistanceReason', 'ADAP', 'NoADAPReason', 'DataCollectionStage']
+                    'PrivatePay', 'NoPrivatePayReason', 'StateHealthIns', 'NoStateHealthInsReason', 'IndianHealthServices', 'NoIndianHealthServicesReason',        
+                    'OtherInsurance', 'HIVAIDSAssistance', 'NoHIVAIDSAssistanceReason', 'ADAP', 'NoADAPReason', 'DataCollectionStage']
     incomebenefitsfile = integerizeMe(incomebenefitsfile, integerList)                
     
 
